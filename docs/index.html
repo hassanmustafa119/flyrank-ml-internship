@@ -1,1 +1,396 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Refresh / Content Opportunity Scoring</title>
+
+<style>
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.7;
+    max-width: 950px;
+    margin: auto;
+    padding: 40px 24px;
+    color: #222;
+    background: #fafafa;
+}
+
+header {
+    padding: 40px 0 25px;
+    border-bottom: 1px solid #ddd;
+}
+
+h1 {
+    font-size: 38px;
+    line-height: 1.2;
+    margin-bottom: 12px;
+}
+
+h2 {
+    margin-top: 45px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 8px;
+}
+
+h3 {
+    margin-top: 28px;
+}
+
+.subtitle {
+    font-size: 19px;
+    color: #666;
+}
+
+.card {
+    background: white;
+    padding: 24px;
+    margin: 25px 0;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+
+.highlight {
+    font-size: 22px;
+    font-weight: bold;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    background: white;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+
+th {
+    background: #f1f1f1;
+}
+
+img {
+    max-width: 100%;
+    display: block;
+    margin: 20px auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.note {
+    background: #f5f5f5;
+    padding: 18px;
+    border-left: 4px solid #555;
+}
+
+footer {
+    margin-top: 60px;
+    padding-top: 25px;
+    border-top: 1px solid #ddd;
+    color: #666;
+}
+</style>
+
+</head>
+
+<body>
+
+<header>
+<h1>Refresh / Content Opportunity Scoring: A Validation-Aware Action Playbook</h1>
+<p class="subtitle">
+A research study on prioritizing content pages for human review using search-performance signals.
+</p>
+</header>
+
+<section>
+<h2>Abstract</h2>
+
+<p>
+This study asks which content pages show measurable signals that make them worth reviewing first for a potential refresh or content opportunity. Using FlyRank content-performance data, the analysis aggregates March observations at the content level and evaluates whether measured search signals can prioritize pages associated with a subsequent impression decline. A client-held-out Random Forest evaluation achieved an observed Precision@50 of <strong>0.520</strong>, compared with <strong>0.400</strong> for the baseline, while a time-aware evaluation produced a substantially lower Precision@50 of <strong>0.040</strong>. The results therefore show useful measured signal in one validation design but do not establish stable predictive performance across the tested time period. The resulting action playbook is recommended as <strong>directional decision-support</strong> for prioritizing human content review, with additional temporal validation and monitoring required before operational reliance.
+</p>
+</section>
+
+<section>
+<h2>1. Introduction / Problem Statement</h2>
+
+<p>
+Content teams often have more pages to review than they can investigate manually. The practical problem is therefore not simply identifying whether performance changes occurred, but deciding <strong>which pages deserve attention first</strong> and what evidence should guide that review.
+</p>
+
+<p>
+This project approaches that problem as a content-opportunity prioritization task. Rather than attempting to automate content decisions, it uses measurable search-performance signals to construct a ranked queue of pages for human investigation.
+</p>
+
+<p>
+The analysis also treats validation as part of the decision problem. A ranking that performs well under one split may not remain useful when the data changes over time. For that reason, the work compares a client-held-out evaluation with a time-aware evaluation and reports the difference rather than relying on a single favorable metric.
+</p>
+
+<div class="note">
+<strong>Decision supported:</strong> Which pages should a human SEO or content reviewer investigate first?
+</div>
+</section>
+
+<section>
+<h2>2. Data</h2>
+
+<p>
+The analysis uses the March 2026 release of the FlyRank content-performance warehouse, centered on the
+<code>fact_content_daily_performance</code> table.
+</p>
+
+<p>
+The March slice contains <strong>9,841,378 daily records</strong>, covering
+<strong>31 dates</strong> and <strong>331,437 unique content pages</strong>.
+</p>
+
+<p>
+The analysis uses public-safe hashed identifiers and aggregate performance measurements rather than client names, domains, URLs, private queries, or credentials.
+</p>
+
+<p>
+For predictive evaluation, March observations are used as the feature period and April impressions are used only as the future outcome. Future April performance is excluded from the model features to avoid target leakage.
+</p>
+
+<p>
+Key measured signals include impressions, clicks, CTR, and average search position.
+</p>
+</section>
+
+<section>
+<h2>3. Methodology</h2>
+
+<h3>Features</h3>
+
+<p>
+Content-level March features include impressions, clicks, CTR, average position, and related transformed search-performance measures.
+</p>
+
+<h3>Label</h3>
+
+<p>
+The outcome label is defined from the subsequent April period:
+<strong>decline = 1 when April impressions are at least 20% lower than March impressions; otherwise decline = 0.</strong>
+</p>
+
+<h3>Model</h3>
+
+<p>
+A Random Forest classifier is used to rank held-out content records according to their estimated likelihood of the decline pattern.
+</p>
+
+<h3>Validation</h3>
+
+<p>
+The primary evaluation uses a client-grouped 80/20 split so that content from the same client does not appear in both training and test sets.
+</p>
+
+<p>
+The resulting evaluation contained <strong>7,038 held-out test rows</strong>. The validation design separated clients between training and testing, with <strong>35 training clients and 9 test clients</strong>.
+</p>
+
+<p>
+A separate time-aware evaluation was also performed using earlier observations for training and a later period for testing. This was used to assess whether the measured performance transferred across time.
+</p>
+
+<h3>Leakage checks</h3>
+
+<p>
+Future outcome information was excluded from the predictive feature set. April impressions and clicks were treated as future outcomes rather than model inputs.
+</p>
+
+<p>
+The resulting action queue combines model scores with reason codes such as observed impression decline and low-click opportunity to support human review.
+</p>
+</section>
+
+<section>
+<h2>4. Results</h2>
+
+<table>
+<tr>
+<th>Validation design</th>
+<th>Precision@50</th>
+</tr>
+<tr>
+<td>Baseline — client-held-out</td>
+<td><strong>0.400</strong></td>
+</tr>
+<tr>
+<td>Random Forest — client-held-out</td>
+<td><strong>0.520</strong></td>
+</tr>
+<tr>
+<td>Random Forest — time-aware</td>
+<td><strong>0.040</strong></td>
+</tr>
+</table>
+
+<p>
+Under the client-held-out evaluation, the Random Forest achieved a measured Precision@50 of
+<strong>0.520</strong>, compared with <strong>0.400</strong> for the baseline.
+</p>
+
+<p>
+However, the time-aware evaluation produced a Precision@50 of only
+<strong>0.040</strong>.
+</p>
+
+<div class="card">
+<p class="highlight">Measured validation gap: 0.480</p>
+<p>
+The large difference indicates that the stronger client-held-out result did not automatically transfer to the tested temporal setting.
+</p>
+</div>
+
+<h3>Validation comparison</h3>
+
+<img src="validation_precision_at_50.png"
+  alt="Precision at 50 validation comparison">
+
+<p>
+The chart summarizes the measured Precision@50 results across the validation designs.
+</p>
+
+<h3>Score distribution</h3>
+
+<img src="action_queue_score_distribution.png"
+  alt="Random Forest action queue score distribution">
+
+<p>
+The score distribution shows the model scores used to prioritize records in the action queue.
+</p>
+</section>
+
+<section>
+<h2>5. Limitations & Honest Framing</h2>
+
+<ul>
+<li>The strong Precision@50 observed in the client-held-out evaluation did not transfer to the tested time-aware evaluation.</li>
+
+<li>The decline label uses a fixed 20% month-to-month impression decrease. This is an analytical definition, not a universal definition of content decline.</li>
+
+<li>Search performance can change because of factors not represented by the available features, including seasonality, technical changes, indexing changes, search-engine changes, content changes, and changes in search intent.</li>
+
+<li>The action queue prioritizes pages for investigation. It does not establish why a page changed or guarantee that a particular intervention will improve performance.</li>
+
+<li>The tested evaluation periods are limited. Additional temporal validation would be required before treating the ranking as a stable operational predictor.</li>
+</ul>
+
+<div class="note">
+<strong>Interpretation:</strong>
+The model should currently be treated as <strong>directional decision-support evidence</strong>, not as a reliably generalizable predictor of future content decline.
+</div>
+</section>
+
+<section>
+<h2>6. Ranked Recommendations</h2>
+
+<p>
+The action playbook converts measured signals into a prioritized review queue.
+</p>
+
+<ol>
+<li>
+<strong>Prioritize:</strong>
+Use the ranked queue to identify records for human review.
+</li>
+
+<li>
+<strong>Check the evidence:</strong>
+Inspect impressions, clicks, CTR, position, and the direction of performance change.
+</li>
+
+<li>
+<strong>Investigate context:</strong>
+Check for technical, indexing, seasonal, content, or search-intent explanations.
+</li>
+
+<li>
+<strong>Choose an intervention:</strong>
+Only recommend a content or SEO intervention after human investigation.
+</li>
+
+<li>
+<strong>Measure the outcome:</strong>
+Compare subsequent performance rather than assuming an intervention worked.
+</li>
+</ol>
+
+<p>
+Because the time-aware validation produced a Precision@50 of <strong>0.040</strong>, the action queue should be used to focus human attention rather than make automatic content decisions.
+</p>
+</section>
+
+<section>
+<h2>7. Artifacts</h2>
+
+<p>
+The analysis generated the following research artifacts:
+</p>
+
+<ul>
+<li>Ranked action queue</li>
+<li>Validation comparison table</li>
+<li>Monitoring baseline</li>
+<li>Action-queue score distribution</li>
+<li>Validation Precision@50 comparison</li>
+</ul>
+
+<p>
+These artifacts provide the evidence behind the paper's recommendations while keeping the presentation public-safe.
+</p>
+</section>
+
+<section>
+<h2>8. Reproducibility</h2>
+
+<p>
+The analysis is implemented in the project repository under
+<code>work/notebooks/</code>.
+</p>
+
+<p>
+The capstone notebook documents the progression from data inspection and signal auditing through validation, modeling, and the final content action playbook.
+</p>
+
+<p>
+The repository contains the implementation, analytical definitions, validation design, and generated outputs needed to inspect and reproduce the workflow.
+</p>
+
+<p>
+<a href="https://github.com/hassanmustafa119/flyrank-ml-internship">
+View the project repository
+</a>
+</p>
+</section>
+
+<section>
+<h2>9. Acknowledgments & Data Credit</h2>
+
+<p>
+Built on the <strong>FlyRank ML Internship dataset</strong>.
+</p>
+
+<p>
+The analysis was completed as part of the FlyRank ML Internship and uses the internship's content-performance warehouse for research and learning purposes.
+</p>
+
+<p>
+Data credit:
+<a href="https://flyrank.ai">FlyRank</a>
+</p>
+</section>
+
+<footer>
+<p>
+This research presents measured analytical results for learning and decision-support purposes. It does not claim causal effects, search-engine algorithm behavior, or guaranteed outcomes from content interventions.
+</p>
+</footer>
+
+</body>
+</html>
 
